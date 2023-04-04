@@ -16,6 +16,8 @@ include_directories("./libs/sqlite")
 # 指定 sqlite dll 和 lib 文件路径
 link_directories("./libs/sqlite")
 
-add_executable(fullkeylogger "main.cpp" "flypytblsqlite.cpp")
+add_executable(fullIME "main.cpp" "flypytblsqlite.cpp")
 set(LIBS sqlite3)
-target_link_libraries(fullkeylogger ${LIBS})
+target_link_libraries(fullIME ${LIBS})
+
+# add_executable(fullSQL "flypytblsqlite.cpp")
