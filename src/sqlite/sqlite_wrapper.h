@@ -11,4 +11,18 @@
 
 #include "../../libs/sqlite/sqlite3.h"
 
-std::unordered_map<std::string, std::vector<std::vector<std::pair<std::string, long>>>> transTableToMap(std::string dbPath, int pageSize);
+struct UserData {
+    int& itemCount;
+    std::vector<std::pair<std::string, long>>& result;
+};
+
+// 回调函数
+int queryPinyinCallback(void* data, int argc, char** argv, char** azColName);
+
+sqlite3* openSqlite(std::string dbPath);
+
+std::vector<std::pair<std::string, long>> queryPinyin(sqlite3* db, std::string pinyin);
+
+std::vector<std::vector<std::pair<std::string, long>>> queryPinyinInPage(sqlite3* db, std::string pinyin);
+
+void closeSqliteDB(sqlite3* db);

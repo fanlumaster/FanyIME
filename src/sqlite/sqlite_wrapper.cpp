@@ -1,12 +1,12 @@
 #include "./sqlite_wrapper.h"
 
-struct UserData {
-    int& itemCount;
-    std::vector<std::pair<std::string, long>>& result;
-};
-
-// 回调函数
-int queryPinyinCallback(void* data, int argc, char** argv, char** azColName);
+int queryPinyinCallback(void* data, int argc, char** argv, char** azColName) {
+    UserData* userData = static_cast<UserData*>(data);
+    std::vector<std::pair<std::string, long>>& myVec = userData->result;
+    myVec.push_back(std::make_pair(std::string(argv[1]), std::stol(argv[2])));
+    userData->itemCount++;
+    return 0;
+}
 
 sqlite3* openSqlite(std::string dbPath) {
     sqlite3* db;
@@ -30,7 +30,7 @@ sqlite3* openSqlite(std::string dbPath) {
 std::vector<std::pair<std::string, long>> queryPinyin(sqlite3* db, std::string pinyin) {
     std::vector<std::pair<std::string, long>> resVec;
     std::string tblName = "fullpinyinsimple";
-    std::string querySQL = "select * from " + tblName + " where key like " + "'" + pinyin + "%'" + " and length(key) == 2 order by weight desc limit 300";
+    std::string querySQL = "select * from " + tblName + " where key like " + "'" + pinyin + "%'" + " and length(key) == 2 order by weight desc limit 200";
     // std::cout << querySQL << '\n';
     int result;
     char* errMsg = nullptr;
@@ -39,36 +39,50 @@ std::vector<std::pair<std::string, long>> queryPinyin(sqlite3* db, std::string p
     // 查询
     result = sqlite3_exec(db, querySQL.c_str(), queryPinyinCallback, &userData, &errMsg);
     // std::cout << "itemCnt = " << itemCount << '\n';
-
     if (result) {
         // Todo: 日志
         std::cout << "query error!" << '\n';
     }
-
     return resVec;
+}
+
+/*
+    把分页的逻辑给抽离出来，暂时使用这种方法
+    Todo: 后续能否使用 SQL 语句中的语法进行分页的效率改进
+*/
+std::vector<std::vector<std::pair<std::string, long>>> queryPinyinInPage(sqlite3* db, std::string pinyin) {
+    std::vector<std::vector<std::pair<std::string, long>>> pagedVec;
+    std::vector<std::pair<std::string, long>> noPagedVec = queryPinyin(db, pinyin);
+    std::vector<std::pair<std::string, long>> curVec;
+    int cnt = 0;
+    for (auto eachEle : noPagedVec) {
+        curVec.push_back(eachEle);
+        cnt += 1;
+        if (cnt % 8 == 0) {
+            pagedVec.push_back(curVec);
+            curVec.clear();
+        }
+    }
+    return pagedVec;
 }
 
 void closeSqliteDB(sqlite3* db) { sqlite3_close(db); }
 
-int queryPinyinCallback(void* data, int argc, char** argv, char** azColName) {
-    UserData* userData = static_cast<UserData*>(data);
-    std::vector<std::pair<std::string, long>>& myVec = userData->result;
-    myVec.push_back(std::make_pair(std::string(argv[1]), std::stol(argv[2])));
-    userData->itemCount++;
-    return 0;
-}
-
-int main(int argc, char const* argv[]) {
-    std::string dbPath = "../../src/flyciku.db";
-    sqlite3* db = openSqlite(dbPath);
-    std::vector<std::pair<std::string, long>> resVec = queryPinyin(db, "a");
-    queryPinyin(db, "aa");
-    queryPinyin(db, "ni");
-    queryPinyin(db, "wo");
-    queryPinyin(db, "gw");
-    // for (auto eachPair : resVec) {
-    //     std::cout << eachPair.first << "\t" << eachPair.second << '\n';
-    // }
-    closeSqliteDB(db);
-    return 0;
-}
+// int main(int argc, char const* argv[]) {
+//     std::string dbPath = "../../src/flyciku.db";
+//     sqlite3* db = openSqlite(dbPath);
+//     std::vector<std::pair<std::string, long>> resVec = queryPinyin(db, "ni");
+//     std::vector<std::vector<std::pair<std::string, long>>> pagedVec = queryPinyinInPage(db, "ni");
+//     for (auto fstVar : pagedVec) {
+//         std::cout << fstVar.size() << '\n';
+//         for (auto sndVar : fstVar) {
+//             std::cout << sndVar.first << "\t" << sndVar.second << '\n';
+//         }
+//         std::cout << "split ===========" << '\n';
+//     }
+//     // for (auto eachPair : resVec) {
+//     //     std::cout << eachPair.first << "\t" << eachPair.second << '\n';
+//     // }
+//     closeSqliteDB(db);
+//     return 0;
+// }

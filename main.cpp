@@ -17,6 +17,7 @@
 #include <locale>
 
 #include "./flypytblsqlite.h"
+#include "./src/sqlite/sqlite_wrapper.h"
 
 // 全局变量，用来捕捉键盘的字符
 std::vector<char> charVec;
@@ -29,6 +30,8 @@ std::vector<std::pair<std::string, long>> curCandidateVec;
 int pageNo = 0;
 // 左右引号的标志
 bool quoteFlag = true;
+// 数据库
+sqlite3* db;
 
 // 整体输入法状态的一个控制
 // 默认是 0，也就是英文状态
@@ -97,10 +100,10 @@ LRESULT CALLBACK KBDHook(int nCode, WPARAM wParam, LPARAM lParam) {
                         charVec.pop_back();
                         std::string hanKey(charVec.begin(), charVec.end());
                         // std::cout << hanKey << ": ";
-                        if (sqlPageMap.count(hanKey)) {
-                            auto allHans = sqlPageMap[hanKey];
-                            candidateVec = allHans;
-                            curCandidateVec = allHans[0];
+                        // std::vector<std::vector<std::pair<std::string, long>>>
+                        candidateVec = queryPinyinInPage(db, hanKey);
+                        if (candidateVec.size() > 0) {
+                            curCandidateVec = candidateVec[0];
                         } else {
                             candidateVec.clear();
                             curCandidateVec.clear();
@@ -129,11 +132,9 @@ LRESULT CALLBACK KBDHook(int nCode, WPARAM wParam, LPARAM lParam) {
                     // 处理所有符合的字符
                     if (charVec.size() > 0) {
                         std::string hanKey(charVec.begin(), charVec.end());
-                        // std::cout << hanKey << ": ";
-                        if (sqlPageMap.count(hanKey)) {
-                            auto allHans = sqlPageMap[hanKey];
-                            candidateVec = allHans;
-                            curCandidateVec = allHans[0];
+                        candidateVec = queryPinyinInPage(db, hanKey);
+                        if (candidateVec.size() > 0) {
+                            curCandidateVec = candidateVec[0];
                         } else {
                             candidateVec.clear();
                             curCandidateVec.clear();
@@ -382,9 +383,9 @@ int main() {
     // 设置钩子
     HHOOK kbd = SetWindowsHookEx(WH_KEYBOARD_LL, &KBDHook, 0, 0);
     // 初始化小鹤双拼的码表，纯双拼二码
-    std::string dbPath = "../../src/flyciku.db";
     std::cout << "开始初始化..." << '\n';
-    sqlPageMap = transTableToMap(dbPath, 8);  // 如果把这个放到钩子函数里面会导致程序很慢的
+    std::string dbPath = "../../src/flyciku.db";
+    db = openSqlite(dbPath);
     std::cout << "初始化完成" << '\n';
     std::cout << IMEStateToast << '\n';
 
