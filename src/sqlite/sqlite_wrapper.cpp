@@ -47,6 +47,47 @@ std::vector<std::pair<std::string, long>> queryPinyin(sqlite3* db, std::string p
 }
 
 /*
+    查询两个字的条目
+*/
+std::vector<std::pair<std::string, long>> queryTwoPinyin(sqlite3* db, std::string pinyin) {
+    std::vector<std::pair<std::string, long>> resVec;
+    std::string tblName = "fullpinyinsimple";
+    std::string querySQL = "select * from " + tblName + " where key like " + "'" + pinyin + "%'" + " and length(key) == 4 order by weight desc limit 200";
+    // std::cout << querySQL << '\n';
+    int result;
+    char* errMsg = nullptr;
+    int itemCount = 0;
+    UserData userData{itemCount, resVec};
+    // 查询
+    result = sqlite3_exec(db, querySQL.c_str(), queryPinyinCallback, &userData, &errMsg);
+    // std::cout << "itemCnt = " << itemCount << '\n';
+    if (result) {
+        // Todo: 日志
+        std::cout << "query error!" << '\n';
+    }
+    return resVec;
+}
+
+std::vector<std::pair<std::string, long>> queryMultiPinyin(sqlite3* db, std::string pinyin) {
+    std::vector<std::pair<std::string, long>> resVec;
+    std::string tblName = "fullpinyinsimple";
+    std::string querySQL = "select * from " + tblName + " where key like " + "'" + pinyin + "%'" + " order by weight desc limit 200";
+    // std::cout << querySQL << '\n';
+    int result;
+    char* errMsg = nullptr;
+    int itemCount = 0;
+    UserData userData{itemCount, resVec};
+    // 查询
+    result = sqlite3_exec(db, querySQL.c_str(), queryPinyinCallback, &userData, &errMsg);
+    // std::cout << "itemCnt = " << itemCount << '\n';
+    if (result) {
+        // Todo: 日志
+        std::cout << "query error!" << '\n';
+    }
+    return resVec;
+}
+
+/*
     把分页的逻辑给抽离出来，暂时使用这种方法
     Todo: 后续能否使用 SQL 语句中的语法进行分页的效率改进
 */
@@ -62,6 +103,56 @@ std::vector<std::vector<std::pair<std::string, long>>> queryPinyinInPage(sqlite3
             pagedVec.push_back(curVec);
             curVec.clear();
         }
+    }
+    if (cnt < 8) {
+        pagedVec.push_back(curVec);
+        curVec.clear();
+    }
+    return pagedVec;
+}
+
+/*
+    两个字的条目的分页
+*/
+std::vector<std::vector<std::pair<std::string, long>>> queryTwoPinyinInPage(sqlite3* db, std::string pinyin) {
+    std::vector<std::vector<std::pair<std::string, long>>> pagedVec;
+    std::vector<std::pair<std::string, long>> noPagedVec = queryTwoPinyin(db, pinyin);
+    // for (auto each : noPagedVec) {
+    //     std::cout << "fany => " << each.first << '\t' << each.second << '\n';
+    // }
+    std::vector<std::pair<std::string, long>> curVec;
+    int cnt = 0;
+    for (auto eachEle : noPagedVec) {
+        curVec.push_back(eachEle);
+        cnt += 1;
+        if (cnt % 8 == 0) {
+            pagedVec.push_back(curVec);
+            curVec.clear();
+        }
+    }
+    if (cnt < 8) {
+        pagedVec.push_back(curVec);
+        curVec.clear();
+    }
+    return pagedVec;
+}
+
+std::vector<std::vector<std::pair<std::string, long>>> queryMultiPinyinInPage(sqlite3* db, std::string pinyin) {
+    std::vector<std::vector<std::pair<std::string, long>>> pagedVec;
+    std::vector<std::pair<std::string, long>> noPagedVec = queryMultiPinyin(db, pinyin);
+    std::vector<std::pair<std::string, long>> curVec;
+    int cnt = 0;
+    for (auto eachEle : noPagedVec) {
+        curVec.push_back(eachEle);
+        cnt += 1;
+        if (cnt % 8 == 0) {
+            pagedVec.push_back(curVec);
+            curVec.clear();
+        }
+    }
+    if (cnt < 8) {
+        pagedVec.push_back(curVec);
+        curVec.clear();
     }
     return pagedVec;
 }

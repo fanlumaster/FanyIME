@@ -96,12 +96,39 @@ LRESULT CALLBACK KBDHook(int nCode, WPARAM wParam, LPARAM lParam) {
                     处理退格键
                 */
                 if (s->vkCode == VK_BACK) {
-                    if (charVec.size() > 0) {
+                    int curSize = charVec.size();
+                    if (curSize > 0 && curSize <= 3) {
                         charVec.pop_back();
                         std::string hanKey(charVec.begin(), charVec.end());
-                        // std::cout << hanKey << ": ";
-                        // std::vector<std::vector<std::pair<std::string, long>>>
                         candidateVec = queryPinyinInPage(db, hanKey);
+                        if (candidateVec.size() > 0) {
+                            curCandidateVec = candidateVec[0];
+                        } else {
+                            candidateVec.clear();
+                            curCandidateVec.clear();
+                        }
+                        // charVec.clear();
+                        // 把当前合的候选框给打印出来
+                        printOneDVector(curCandidateVec);
+                        return 1;
+                    } else if (curSize >= 4 && curSize <= 5) {
+                        charVec.pop_back();
+                        std::string hanKey(charVec.begin(), charVec.end());
+                        candidateVec = queryTwoPinyinInPage(db, hanKey);
+                        if (candidateVec.size() > 0) {
+                            curCandidateVec = candidateVec[0];
+                        } else {
+                            candidateVec.clear();
+                            curCandidateVec.clear();
+                        }
+                        // charVec.clear();
+                        // 把当前合的候选框给打印出来
+                        printOneDVector(curCandidateVec);
+                        return 1;
+                    } else if (curSize >= 6) {
+                        charVec.pop_back();
+                        std::string hanKey(charVec.begin(), charVec.end());
+                        candidateVec = queryMultiPinyinInPage(db, hanKey);
                         if (candidateVec.size() > 0) {
                             curCandidateVec = candidateVec[0];
                         } else {
@@ -129,10 +156,31 @@ LRESULT CALLBACK KBDHook(int nCode, WPARAM wParam, LPARAM lParam) {
                         return 1;
                     }
                     charVec.push_back(std::tolower(c));
+                    int curSize = charVec.size();
                     // 处理所有符合的字符
-                    if (charVec.size() > 0) {
+                    if (curSize > 0 && curSize <= 2) {
                         std::string hanKey(charVec.begin(), charVec.end());
                         candidateVec = queryPinyinInPage(db, hanKey);
+                        if (candidateVec.size() > 0) {
+                            curCandidateVec = candidateVec[0];
+                        } else {
+                            candidateVec.clear();
+                            curCandidateVec.clear();
+                        }
+                        // charVec.clear();
+                    } else if (curSize > 2 && curSize <= 4) {
+                        std::string hanKey(charVec.begin(), charVec.end());
+                        candidateVec = queryTwoPinyinInPage(db, hanKey);
+                        if (candidateVec.size() > 0) {
+                            curCandidateVec = candidateVec[0];
+                        } else {
+                            candidateVec.clear();
+                            curCandidateVec.clear();
+                        }
+                        // charVec.clear();
+                    } else if (curSize > 4) {
+                        std::string hanKey(charVec.begin(), charVec.end());
+                        candidateVec = queryMultiPinyinInPage(db, hanKey);
                         if (candidateVec.size() > 0) {
                             curCandidateVec = candidateVec[0];
                         } else {
@@ -164,7 +212,8 @@ LRESULT CALLBACK KBDHook(int nCode, WPARAM wParam, LPARAM lParam) {
                 if (std::isdigit(c)) {
                     if (!fShiftDown) {
                         // 上屏候选项
-                        if (!candidateVec.empty() && candidateVec[0].size()) {
+                        if (!candidateVec.empty() && !candidateVec[0].empty()) {
+                            std::cout << "fany test 3" << '\n';
                             // int canSize = candidateVec[0].size();
                             int canSize = curCandidateVec.size();
                             int cInt = c - '0';
