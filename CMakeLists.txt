@@ -20,4 +20,5 @@ add_executable(fullIME "main.cpp" "flypytblsqlite.cpp")
 set(LIBS sqlite3)
 target_link_libraries(fullIME ${LIBS})
 
-# add_executable(fullSQL "flypytblsqlite.cpp")
+add_executable(fanySQL "./src/sqlite/sqlite_wrapper.cpp")
+target_link_libraries(fanySQL ${LIBS})
